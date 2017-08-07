@@ -17,6 +17,10 @@ library(glmnet)
 
 safety<- read.csv('train.csv')
 
+train <- subset(safety, Task <=12)
+test <- subset(safety, Task >12)
+
+
 set.seed(1)
 control <- rfeControl(functions=rfFuncs, method="cv", number=5)
 # run the RFE algorithm
@@ -26,8 +30,91 @@ print(results)
 # list the chosen features
 predictors(results)
 # plot the results
-plot(results, type=c("g", "o"))
+plot(results)
+
+
+
+```
+
+```{r}
+Sys.time()
+set.seed(1)
+control_2 <- rfeControl(functions=rfFuncs, method="cv", number=5)
+# run the RFE algorithm
+results_2 <- rfe(safety[,4:94], safety[,99], sizes=c(5,10), rfeControl=control_2)
+# summarize the results
+print(results_2)
+# list the chosen features
+predictors(results_2)
+# plot the results
+plot(results_2)
 Sys.time()
 
+# ## Random Forest
+# 
+# library(doParallel)
+# cl <- makeCluster(detectCores()-1)
+# registerDoParallel(cl)
+# 
+# # codes goes in here
+# set.seed(1)
+# control <- trainControl(method ='cv',savePredictions = T, classProbs = T)
+# fit.rf <- train(Choice~Price1+Price2+Price3+income+segment+night+ppark+age+region+miles+educ+Urb+year+gender+NV1+NV2+SC2+FP3+BU3+AF2, data=safety, method="rf", trControl=control)
+# 
+# 
+# stopCluster(cl)
+```
+
+```{r}
+
+LogLosSummary <- function (data, lev = NULL, model = NULL) {
+  LogLos <- function(actual, pred, eps = 1e-15) {
+    stopifnot(all(dim(actual) == dim(pred)))
+    pred[pred < eps] <- eps
+    pred[pred > 1 - eps] <- 1 - eps
+    -sum(actual * log(pred)) / nrow(pred) 
+  }
+  if (is.character(data$obs)) data$obs <- factor(data$obs, levels = lev)
+  pred <- data[, "pred"]
+  obs <- data[, "obs"]
+  isNA <- is.na(pred)
+  pred <- pred[!isNA]
+  obs <- obs[!isNA]
+  data <- data[!isNA, ]
+  cls <- levels(obs)
+
+  if (length(obs) + length(pred) == 0) {
+    out <- rep(NA, 2)
+  } else {
+    pred <- factor(pred, levels = levels(obs))
+    require("e1071")
+    out <- unlist(e1071::classAgreement(table(obs, pred)))[c("diag",                                                                                                                                                             "kappa")]
+
+    probs <- data[, cls]
+    actual <- model.matrix(~ obs - 1)
+    out2 <- LogLos(actual = actual, pred = probs)
+  }
+  out <- c(out, out2)
+  names(out) <- c("Accuracy", "Kappa", "LogLoss")
+
+  if (any(is.nan(out))) out[is.nan(out)] <- NA 
+
+  out
+}
+
+set.seed(1)
+control <- trainControl(method ='repeatedcv', number = 10, repeats = 3, savePredictions = T, classProbs = T, search = "grid",summaryFunction = LogLosSummary)
+tunegrid <- expand.grid(.mtry=c(1:15))
+
+Sys.time()
+rf_gridsearch <- train(Choice~Price1+Price2+Price3+income+segment+night+ppark+age+region+miles+educ+Urb+year+gender+NV1+NV2+SC2+FP3+BU3+AF2, data=train, method="rf", trControl=control, tuneGrid = tunegrid,metric = "LogLoss")
+
+Sys.time()
+print(rf_gridsearch)
+plot(rf_gridsearch)
+
+
+
+```
 
 ```

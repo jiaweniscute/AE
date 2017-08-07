@@ -18,9 +18,13 @@ safety<- read.csv('train.csv')
 training <- subset(safety, Task <=12)
 testing <- subset(safety, Task >12)
 
-preProcValues <- preProcess(training[,!(colnames(training) %in% c("Ch1","Ch2","Ch3","Ch4")), drop=FALSE])
 
-training <- model.matrix(Choice~.,data = training)
+df <- dummy.data.frame(training, names=c("segment","miles","night","gender","age","educ","region","Urb","income","ppark"), sep="_")
+
+
+preProcValues <- preProcess(training[,!(colnames(training) %in% c("Ch1","Ch2","Ch3","Ch4","Choice")), drop=FALSE])
+
+training <- model.matrix(~.,data = training[,"gender"])
 testing <- model.matrix(Choice~.,data = test)
 
 trainTransformed <- predict(preProcValues, training)
@@ -30,11 +34,46 @@ testTransformed <- predict(preProcValues, testing)
 
 ```{r}
 
-train <-  mlogit.data(subset(safety,Task<=12),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+train_test <- mlogit.data(training,
                   shape ='wide',
                   choice = 'Choice',
                   sep = '',
-                  varying = c(4:83), 
+                  id.var = 'Case')
+
+train_test_temp <- subset(train_test[c("gender","segment","miles","night","age","educ","region","Urb","income","ppark")])
+
+x <- cor(df[,83:162])
+# summarize the correlation matrix
+print(correlationMatrix)
+# find attributes that are highly corrected (ideally >0.75)
+x<-x[,rowSums(is.na(x))==0]
+highlyCorrelated <- findCorrelation(correlationMatrix, cutoff=0.5)
+# print indexes of highly correlated attributes
+print(highlyCorrelated)
+
+
+train <-  mlogit.data(subset(training,Task<=12),
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83),
                   alt.levels = c("Ch1","Ch2","Ch3","Ch4"),id.var = 'Case')
 
 test <-  mlogit.data(subset(safety,Task > 12),
@@ -48,27 +87,29 @@ test <-  mlogit.data(subset(safety,Task > 12),
 ActualChoice <- subset(safety, Task > 12)[,"Choice"]
 
 
-mixedlogitmodel2 <-  mlogit(Choice ~ 1|segment+year+miles+night+gender+age+educ+region+Urb+income+ppark,data = train,panel = TRUE, rpar = c(Price = 'n') )
-mixedlogitpred2 <- predict(mixedlogitmodel2,newdata = test,probability = TRUE)
+mixedlogitmodel2 <-  mlogit(Choice ~ 1 |segment+year+night+gender+age+educ+region+Urb+income+ppark,data = train_test)
+
+
+mixedlogitpred2 <- predict(mixedlogitmodel2,newdata = testing,probability = TRUE)
 
 mixedlogit_mll_test <-mlogLoss(ActualChoice,mixedlogitpred2)
 
 ```
 ```
+```{r}
+set.seed(10)
+install.package
+
+```
+
 
 ```{r}
 
-mlogloss <- function(data, lev = NULL, model = NULL) {
-  logloss_val <- logLoss(y_pred = data$pred, y_true = data$Choice, positive = lev[1])
-  c(mlogloss = logloss_val)
-}
 
-control <- trainControl(method ='cv',savePredictions = T, classProbs = T, summaryFunction = mlogloss)
+control <- trainControl(method ='cv',savePredictions = T, classProbs = T)
 
 
-## Random Forest
-set.seed(1)
-fit.rf <- train(Choice~.-Case-No-Task-Ch1-Ch2-Ch3-Ch4, data=safety, method="rf", trControl=control)
+
 
 ## SVM
 set.seed(1)

@@ -76,7 +76,50 @@ probit_mll <- mlogLoss(ActualChoice,probit_pred)
 ```{r}
 ## 1.18
 probit2<-  mlogit(Choice~Price,data = train, probability = TRUE,probit=TRUE)
+probit_pred2 <- predict(probit2,newdata = test,probability = TRUE)
+probit_mll2 <- mlogLoss(ActualChoice,probit_pred2)
 ```
+
+```{r}
+## 1.181
+probitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,probit = TRUE)
+probit_pred2 <- predict(probitmodel2,newdata = test,probability = TRUE)
+probit_mll2 <- mlogLoss(ActualChoice,probit_pred2)
+
+```
+
+```{r}
+## 1.184
+probitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,probit = TRUE)
+probit_pred2 <- predict(probitmodel2,newdata = test,probability = TRUE)
+probit_mll2 <- mlogLoss(ActualChoice,probit_pred2)
+
+```
+
+## Random Forest  
+## Considering all variables
+```{r}
+## 1.158
+set.seed(1)
+train_rf <- subset(safety[,Task <= 12])
+test_rf <- subset(safety[,Task > 12])
+fit.rf <- train(Choice~.-Case-No-Task-Ch1-Ch2-Ch3-Ch4, data=train_rf, method="rf", trControl=control)
+pred.rf <- predict(fit.rf, newdata = test_rf, type = 'prob')
+mlogLoss(test_rf[,'Choice'],pred.rf)
+
+```
+
+### Considering top 20 variables via RFS
+```{r}
+## 1.118
+set.seed(1)
+control <- trainControl(method ='cv',savePredictions = T, classProbs = T)
+fit.rf <- train(Choice~Price1+Price2+Price3+income+segment+night+ppark+age+region+miles+educ+Urb+year+gender+NV1+NV2+SC2+FP3+BU3+AF2, data=train_rf, method="rf", trControl=control)
+pred.rf <- predict(fit.rf, newdata = test_rf, type = 'prob')
+mlogLoss(test_rf[,'Choice'],pred.rf)
+
+```
+
 
 
 ### Mixed logit model

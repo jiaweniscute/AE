@@ -15,6 +15,9 @@ library(caret)
 
 safety<- read.csv('train.csv')
 
+train_rf <- subset(safety,Task <= 12)
+test_rf <- subset(safety,Task >12)
+
 train <-  mlogit.data(subset(safety,Task<=12),
                   shape ='wide',
                   choice = 'Choice',
@@ -38,45 +41,60 @@ ActualChoice <- subset(safety, Task > 12)[,"Choice"]
 
 ```{r}
 
-probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price-1,data = train,probit = TRUE)
-probit_pred <- predict(probitmodel,newdata = test,probability = TRUE)
-probit_mll <- mlogLoss(ActualChoice,probit_pred)
-
-probitmodel_i <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train,probit = TRUE)
-probit_pred_i <- predict(probitmodel_i,newdata = test,probability = TRUE)
-probit_mll_i <- mlogLoss(ActualChoice,probit_pred_i)
-
-
-probitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,probit = TRUE)
-probit_pred2 <- predict(probitmodel2,newdata = test,probability = TRUE)
-probit_mll2 <- mlogLoss(ActualChoice,probit_pred2)
-
-
-mixedlogitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,panel = TRUE, rpar = c(Price = 'n', Urb = 'n') )
-mixedlogit_pred2 <- predict(mixedlogit_pred2,newdata = test,probability = TRUE)
-mixedlogit2 <- mlogLoss(ActualChoice,probit_pred2)
+# probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price-1,data = train,probit = TRUE)
+# probit_pred <- predict(probitmodel,newdata = test,probability = TRUE)
+# probit_mll <- mlogLoss(ActualChoice,probit_pred)
+# 
+# probitmodel_i <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train,probit = TRUE)
+# probit_pred_i <- predict(probitmodel_i,newdata = test,probability = TRUE)
+# probit_mll_i <- mlogLoss(ActualChoice,probit_pred_i)
+# 
+# 
+# probitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,probit = TRUE)
+# probit_pred2 <- predict(probitmodel2,newdata = test,probability = TRUE)
+# probit_mll2 <- mlogLoss(ActualChoice,probit_pred2)
+# 
+# 
+# mixedlogitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,panel = TRUE, rpar = c(Price = 'n', Urb = 'n') )
+# mixedlogit_pred2 <- predict(mixedlogit_pred2,newdata = test,probability = TRUE)
+# mixedlogit2 <- mlogLoss(ActualChoice,mixedlogit2)
 
 # probitmodel_2 <-  mlogit(Choice ~NV+BU+FP+SC+Price-1|
 #                         segment+income+ppark+age+miles+educ+Urb+year+gender+region+night,data = train,probit = TRUE)
 # probit_pred_2 <- predict(probitmodel_2,newdata = test,probability = TRUE)
 # probit_mll_2 <- mlogLoss(ActualChoice,probit_pred_2)
 
-# control <- trainControl(method="repeatedcv", number=10, repeats=3)
-# # CART
-# set.seed(7)
-# fit.cart <- train(diabetes~., data=PimaIndiansDiabetes, method="rpart", trControl=control)
-# # LDA
-# set.seed(7)
-# fit.lda <- train(diabetes~., data=PimaIndiansDiabetes, method="lda", trControl=control)
-# # SVM
-# set.seed(7)
-# fit.svm <- train(diabetes~., data=PimaIndiansDiabetes, method="svmRadial", trControl=control)
-# # kNN
-# set.seed(7)
-# fit.knn <- train(diabetes~., data=PimaIndiansDiabetes, method="knn", trControl=control)
-# # Random Forest
-# set.seed(7)
-# fit.rf <- train(diabetes~., data=PimaIndiansDiabetes, method="rf", trControl=control)
-# # collect resamples
-# results <- resamples(list(CART=fit.cart, LDA=fit.lda, SVM=fit.svm, KNN=fit.knn, RF=fit.rf))
+mlogloss <- function(data, lev = NULL, model = NULL) {
+  logloss_val <- logLoss(y_pred = data$pred, y_true = data$Choice, positive = lev[1])
+  c(mlogloss = logloss_val)
+}
+
+control <- trainControl(method ='cv',savePredictions = T, classProbs = T)
+
+
+## Random Forest
+set.seed(1)
+fit.rf <- train(Choice~.-Case-No-Task-Ch1-Ch2-Ch3-Ch4, data=train_rf, method="rf", trControl=control)
+
+pred.rf <- predict(fit.rf, newdata = test_rf, type = 'prob')
+mlogLoss(test_rf[,'Choice'],pred.rf)
+
+# control <- trainControl(method="repeatedcv", number=5, repeats=3)
+# CART
+set.seed(7)
+fit.cart <- train(Choice~., data=PimaIndiansDiabetes, method="rpart", trControl=control)
+# LDA
+set.seed(7)
+fit.lda <- train(diabetes~., data=PimaIndiansDiabetes, method="lda", trControl=control)
+# SVM
+set.seed(7)
+fit.svm <- train(diabetes~., data=PimaIndiansDiabetes, method="svmRadial", trControl=control)
+# kNN
+set.seed(7)
+fit.knn <- train(diabetes~., data=PimaIndiansDiabetes, method="knn", trControl=control)
+# Random Forest
+set.seed(7)
+fit.rf <- train(Choice~.-Ch1-Ch2-Ch3-Ch4-Task-Case-No, data=train_rf, method="rf", trControl=control)
+# collect resamples
+results <- resamples(list(CART=fit.cart, LDA=fit.lda, SVM=fit.svm, KNN=fit.knn, RF=fit.rf))
 ```
