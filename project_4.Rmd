@@ -1,0 +1,49 @@
+---
+title: "project_4"
+author: "Ng Jia Wen"
+date: "7 August 2017"
+output: html_document
+---
+```{r}
+setwd("~/School/Analytical Edge/Project")
+library(mlogit) 
+library(ModelMetrics)
+library(glmnet)
+library(caret)
+
+safety<- read.csv('train.csv')
+```
+### Preprocessing
+```{r}
+
+onehot_safety <- model.matrix(Choice~.,data = safety)
+training <- subset(safety, task <=12)
+test <- subset(safety, task >12)
+
+preProcValues <- preProcess(onehot_safety, method = c("center", "scale"))
+
+trainTransformed <- predict(preProcValues, training)
+testTransformed <- predict(preProcValues, test)
+
+```
+
+```{r}
+
+mlogloss <- function(data, lev = NULL, model = NULL) {
+  logloss_val <- logLoss(y_pred = data$pred, y_true = data$Choice, positive = lev[1])
+  c(mlogloss = logloss_val)
+}
+
+control <- trainControl(method ='cv',savePredictions = T, classProbs = T, summaryFunction = mlogloss)
+
+
+## Random Forest
+set.seed(1)
+fit.rf <- train(Choice~.-Case-No-Task-Ch1-Ch2-Ch3-Ch4, data=safety, method="rf", trControl=control)
+
+## SVM
+set.seed(1)
+fit.svm <- train(Choice~.-Case-No-Task-Ch1-Ch2-Ch3-Ch4, data=safety, method="svmRadial", trControl=control)
+
+
+```

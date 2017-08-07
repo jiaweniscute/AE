@@ -1,0 +1,33 @@
+---
+title: "Untitled"
+author: "Ng Jia Wen"
+date: "6 August 2017"
+output: html_document
+---
+
+```{r}
+setwd("~/School/Analytical Edge/Project")
+
+## find best group of variables 
+
+library(caret)
+library(mlogit) 
+library(ModelMetrics)
+library(glmnet)
+
+safety<- read.csv('train.csv')
+
+set.seed(1)
+control <- rfeControl(functions=rfFuncs, method="cv", number=5)
+# run the RFE algorithm
+results <- rfe(safety[,4:94], safety[,99], sizes=c(20,30,40,50,60,70), rfeControl=control)
+# summarize the results
+print(results)
+# list the chosen features
+predictors(results)
+# plot the results
+plot(results, type=c("g", "o"))
+Sys.time()
+
+
+```

@@ -1,0 +1,82 @@
+---
+title: "Project_3"
+author: "Ng Jia Wen"
+date: "7 August 2017"
+output: html_document
+---
+
+```{r}
+setwd("~/School/Analytical Edge/Project")
+library(mlogit) 
+library(ModelMetrics)
+library(glmnet)
+library(caret)
+
+
+safety<- read.csv('train.csv')
+
+train <-  mlogit.data(subset(safety,Task<=12),
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),id.var = 'Case')
+
+test <-  mlogit.data(subset(safety,Task > 12),
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),
+                  id.var = 'Case') 
+
+ActualChoice <- subset(safety, Task > 12)[,"Choice"]
+```
+
+```{r}
+
+mixedlogitmodel_test <-  mlogit(Choice~Price1+Price2+Price3,data = train, panel = TRUE, rpar = c(Price = 'n'), probability = TRUE)
+
+
+mixedlogit_pred_test <- predict(mixedlogitmodel_test,newdata = test,probability = TRUE)
+mixedlogit_mll_test <-mlogLoss(ActualChoice,mixedlogit_pred)
+
+```
+
+
+
+
+
+probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price-1,data = train,probit = TRUE)
+probit_pred <- predict(probitmodel,newdata = test,probability = TRUE)
+probit_mll <- mlogLoss(ActualChoice,probit_pred)
+
+probitmodel_i <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train,probit = TRUE)
+probit_pred_i <- predict(probitmodel_i,newdata = test,probability = TRUE)
+probit_mll_i <- mlogLoss(ActualChoice,probit_pred_i)
+
+
+probitmodel_2 <-  mlogit(Choice ~NV+BU+FP+SC+Price-1|
+                        segment+income+ppark+age+miles+educ+Urb+year+gender+region+night,data = train,probit = TRUE)
+probit_pred_2 <- predict(probitmodel_2,newdata = test,probability = TRUE)
+probit_mll_2 <- mlogLoss(ActualChoice,probit_pred_2)
+
+# control <- trainControl(method="repeatedcv", number=10, repeats=3)
+# # CART
+# set.seed(7)
+# fit.cart <- train(diabetes~., data=PimaIndiansDiabetes, method="rpart", trControl=control)
+# # LDA
+# set.seed(7)
+# fit.lda <- train(diabetes~., data=PimaIndiansDiabetes, method="lda", trControl=control)
+# # SVM
+# set.seed(7)
+# fit.svm <- train(diabetes~., data=PimaIndiansDiabetes, method="svmRadial", trControl=control)
+# # kNN
+# set.seed(7)
+# fit.knn <- train(diabetes~., data=PimaIndiansDiabetes, method="knn", trControl=control)
+# # Random Forest
+# set.seed(7)
+# fit.rf <- train(diabetes~., data=PimaIndiansDiabetes, method="rf", trControl=control)
+# # collect resamples
+# results <- resamples(list(CART=fit.cart, LDA=fit.lda, SVM=fit.svm, KNN=fit.knn, RF=fit.rf))
+```

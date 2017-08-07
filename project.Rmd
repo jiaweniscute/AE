@@ -1,0 +1,112 @@
+---
+title: "AE project model"
+author: "Ng Jia Wen"
+date: "5 August 2017"
+output: html_document
+---
+## Libraries used
+```{r}
+setwd("~/School/Analytical Edge/Project")
+library(mlogit) 
+library(ModelMetrics)
+library(glmnet)
+library(caret)
+
+safety<- read.csv('train.csv')
+
+```
+
+## Feature Selection
+```{r}
+
+
+# ensure results are repeatable
+set.seed(7)
+
+# prepare training scheme
+control <- trainControl(method="repeatedcv", number=10, repeats=3)
+# train the model
+model <- train(Choice~., data=safety, method="lvq", preProcess="scale", trControl=control)
+# estimate variable importance
+importance <- varImp(model, scale=FALSE)
+# summarize importance
+print(importance)
+# plot importance
+plot(importance)
+
+Sys.time()
+
+```
+
+## Logit, Mixed Logit, Probit Models
+```{r}
+safety<- read.csv('train.csv')
+
+train <-  mlogit.data(subset(safety,Task<=12),
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),id.var = 'Case')
+
+test <-  mlogit.data(subset(safety,Task > 12),
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),
+                  id.var = 'Case') 
+
+ActualChoice <- subset(safety, Task > 12)[,"Choice"]
+
+```
+
+### Mixed logit model
+```{r}
+
+mixedlogitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train, panel = TRUE, rpar = c(CC='n',GN='n',NS='n', BU='n', FA='n', LD='n', BZ='n', FC='n', FP='n', RP='n', PP='n', KA='n', SC='n', TS='n', NV='n', MA='n', LB='n', AF='n', HU='n',Price = 'n'), probability = TRUE)
+
+
+mixedlogit_pred <- predict(mixedlogitmodel,newdata = test,probability = TRUE)
+mixedlogit_mll <-mlogLoss(ActualChoice,mixedlogit_pred)
+
+```
+
+### Logit model
+```{r}
+logitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train)
+logit_pred <- predict(logitmodel,newdata = test,probability = TRUE)
+logit_mll <- mlogLoss(ActualChoice,logit_pred)
+```
+
+The mixed logit model performed better with a logloss score of `r mixedlogit_mll` compared to the normal logit model with a score of `r logit_mll`.   
+
+
+### Probit model
+```{r}
+probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train,probit = TRUE)
+probit_pred <- predict(probitmodel,newdata = test,probability = TRUE)
+probit_mll <- mlogLoss(ActualChoice,probit_pred)
+
+```
+
+## Mixed Logit: Removing insignificant variables: CC
+```{r}
+mixedlogitmodel2 <-  mlogit(Choice ~GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train, panel = TRUE, rpar = c(GN='n',NS='n', BU='n', FA='n', LD='n', BZ='n', FC='n', FP='n', RP='n', PP='n', KA='n', SC='n', TS='n', NV='n', MA='n', LB='n', AF='n', HU='n',Price = 'n'), probability = TRUE)
+
+mixedlogit_pred2 <- predict(mixedlogitmodel2,newdata = test,probability = TRUE)
+mixedlogit_mll2 <-mlogLoss(ActualChoice,mixedlogit_pred2)
+```
+Removing variable CC led to a worse logloss score of r`mixedlogit_mll2` as compared to in the first mixedlogit model with a score of r`mixedlogit_mll`. 
+
+
+## Mixed Logit: Removing intercept  
+
+Hypothesis: If there are no attributes for the packages, no customers will be willing to buy any package at all hence, it makes sense to remove the y-intercept. 
+```{r}
+mixedlogitmodel3 <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price-1,data = train, panel = TRUE, rpar = c(CC='n',GN='n',NS='n', BU='n', FA='n', LD='n', BZ='n', FC='n', FP='n', RP='n', PP='n', KA='n', SC='n', TS='n', NV='n', MA='n', LB='n', AF='n', HU='n',Price = 'n'), probability = TRUE)
+
+mixedlogit_pred3 <- predict(mixedlogitmodel3, newdata = test,probability = TRUE)
+mixedlogit_mll3 <-mlogLoss(ActualChoice,mixedlogit_pred3)
+```
+Removing the y-intercept gives a better logloss score of `r mixedlogit_mll3` as compared to mixedlogitmodel 1's score of `r mixedlogit_mll`
