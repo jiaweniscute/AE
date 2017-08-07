@@ -15,16 +15,45 @@ safety<- read.csv('train.csv')
 ```
 ### Preprocessing
 ```{r}
+training <- subset(safety, Task <=12)
+testing <- subset(safety, Task >12)
 
-onehot_safety <- model.matrix(Choice~.,data = safety)
-training <- subset(safety, task <=12)
-test <- subset(safety, task >12)
+preProcValues <- preProcess(training[,!(colnames(training) %in% c("Ch1","Ch2","Ch3","Ch4")), drop=FALSE])
 
-preProcValues <- preProcess(onehot_safety, method = c("center", "scale"))
+training <- model.matrix(Choice~.,data = training)
+testing <- model.matrix(Choice~.,data = test)
 
 trainTransformed <- predict(preProcValues, training)
-testTransformed <- predict(preProcValues, test)
+testTransformed <- predict(preProcValues, testing)
 
+```
+
+```{r}
+
+train <-  mlogit.data(subset(safety,Task<=12),
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),id.var = 'Case')
+
+test <-  mlogit.data(subset(safety,Task > 12),
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),
+                  id.var = 'Case') 
+
+ActualChoice <- subset(safety, Task > 12)[,"Choice"]
+
+
+mixedlogitmodel2 <-  mlogit(Choice ~ 1|segment+year+miles+night+gender+age+educ+region+Urb+income+ppark,data = train,panel = TRUE, rpar = c(Price = 'n') )
+mixedlogitpred2 <- predict(mixedlogitmodel2,newdata = test,probability = TRUE)
+
+mixedlogit_mll_test <-mlogLoss(ActualChoice,mixedlogitpred2)
+
+```
 ```
 
 ```{r}

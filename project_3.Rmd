@@ -33,19 +33,10 @@ test <-  mlogit.data(subset(safety,Task > 12),
 ActualChoice <- subset(safety, Task > 12)[,"Choice"]
 ```
 
+
+
+
 ```{r}
-
-mixedlogitmodel_test <-  mlogit(Choice~Price1+Price2+Price3,data = train, panel = TRUE, rpar = c(Price = 'n'), probability = TRUE)
-
-
-mixedlogit_pred_test <- predict(mixedlogitmodel_test,newdata = test,probability = TRUE)
-mixedlogit_mll_test <-mlogLoss(ActualChoice,mixedlogit_pred)
-
-```
-
-
-
-
 
 probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price-1,data = train,probit = TRUE)
 probit_pred <- predict(probitmodel,newdata = test,probability = TRUE)
@@ -56,10 +47,19 @@ probit_pred_i <- predict(probitmodel_i,newdata = test,probability = TRUE)
 probit_mll_i <- mlogLoss(ActualChoice,probit_pred_i)
 
 
-probitmodel_2 <-  mlogit(Choice ~NV+BU+FP+SC+Price-1|
-                        segment+income+ppark+age+miles+educ+Urb+year+gender+region+night,data = train,probit = TRUE)
-probit_pred_2 <- predict(probitmodel_2,newdata = test,probability = TRUE)
-probit_mll_2 <- mlogLoss(ActualChoice,probit_pred_2)
+probitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,probit = TRUE)
+probit_pred2 <- predict(probitmodel2,newdata = test,probability = TRUE)
+probit_mll2 <- mlogLoss(ActualChoice,probit_pred2)
+
+
+mixedlogitmodel2 <-  mlogit(Choice ~Price|Urb,data = train,panel = TRUE, rpar = c(Price = 'n', Urb = 'n') )
+mixedlogit_pred2 <- predict(mixedlogit_pred2,newdata = test,probability = TRUE)
+mixedlogit2 <- mlogLoss(ActualChoice,probit_pred2)
+
+# probitmodel_2 <-  mlogit(Choice ~NV+BU+FP+SC+Price-1|
+#                         segment+income+ppark+age+miles+educ+Urb+year+gender+region+night,data = train,probit = TRUE)
+# probit_pred_2 <- predict(probitmodel_2,newdata = test,probability = TRUE)
+# probit_mll_2 <- mlogLoss(ActualChoice,probit_pred_2)
 
 # control <- trainControl(method="repeatedcv", number=10, repeats=3)
 # # CART

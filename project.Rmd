@@ -19,6 +19,7 @@ safety<- read.csv('train.csv')
 ## Feature Selection
 ```{r}
 
+ ## Rank by importance
 
 # ensure results are repeatable
 set.seed(7)
@@ -61,17 +62,32 @@ ActualChoice <- subset(safety, Task > 12)[,"Choice"]
 
 ```
 
-### Mixed logit model
+
+### Probit models
 ```{r}
 
-mixedlogitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train, panel = TRUE, rpar = c(CC='n',GN='n',NS='n', BU='n', FA='n', LD='n', BZ='n', FC='n', FP='n', RP='n', PP='n', KA='n', SC='n', TS='n', NV='n', MA='n', LB='n', AF='n', HU='n',Price = 'n'), probability = TRUE)
+##1.17
+probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train,probit = TRUE)
+probit_pred <- predict(probitmodel,newdata = test,probability = TRUE)
+probit_mll <- mlogLoss(ActualChoice,probit_pred)
+
+```
+
+```{r}
+## 1.18
+probit2<-  mlogit(Choice~Price,data = train, probability = TRUE,probit=TRUE)
+```
+
+
+### Mixed logit model
+```{r}
+mixedlogitmodel_test<-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train, panel = TRUE, rpar = c(CC='n',GN='n',NS='n', BU='n', FA='n', LD='n', BZ='n', FC='n', FP='n', RP='n', PP='n', KA='n', SC='n', TS='n', NV='n', MA='n', LB='n', AF='n', HU='n',Price = 'n'), probability = TRUE)
 
 
 mixedlogit_pred <- predict(mixedlogitmodel,newdata = test,probability = TRUE)
 mixedlogit_mll <-mlogLoss(ActualChoice,mixedlogit_pred)
 
 ```
-
 ### Logit model
 ```{r}
 logitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train)
@@ -82,13 +98,7 @@ logit_mll <- mlogLoss(ActualChoice,logit_pred)
 The mixed logit model performed better with a logloss score of `r mixedlogit_mll` compared to the normal logit model with a score of `r logit_mll`.   
 
 
-### Probit model
-```{r}
-probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train,probit = TRUE)
-probit_pred <- predict(probitmodel,newdata = test,probability = TRUE)
-probit_mll <- mlogLoss(ActualChoice,probit_pred)
 
-```
 
 ## Mixed Logit: Removing insignificant variables: CC
 ```{r}
