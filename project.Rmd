@@ -13,7 +13,34 @@ library(glmnet)
 library(caret)
 
 safety<- read.csv('train.csv')
+safety2 <- read.csv('train.csv')
+# data <- lapply(safety$income, function(x) {
+safety2$income <- gsub(".*(29,999|30,000|40,000).*", "49,999", safety2$income)
+safety2$income <-  gsub(".*(50,000|60,000|70,000).*", "79,999", safety2$income)
+safety2$income <-  gsub("(80,000|90,000|100,000).*", "109,999", safety2$income)
+safety2$income <-  gsub("(110,000|120,000|130,000).*", "139,999", safety2$income)
+safety2$income<-  gsub("(140,000|150,000|160,000).*", "169,999", safety2$income)
+safety2$income <-  gsub("(170,000|180,000|190,000).*", "199,999", safety2$income)
+safety2$income <-  gsub("(200,000|210,000|220,000).*", "229,999", safety2$income)
+safety2$income <-  gsub("(230,000|240,000|250,000).*", "259,999", safety2$income)
+safety2$income <-  gsub("(260,000|270,000|280,000).*", "289,999", safety2$income)
+safety2$income <-  gsub("(290,000|300,000).*", "299,999 and above", safety2$income)
 
+train_rf2 <- subset(safety2,Task <= 12)
+
+test_rf2 <- subset(safety2,Task > 12)
+```
+
+```{r}
+set.seed(1)
+control <- trainControl(savePredictions = T, classProbs = T)
+Sys.time()
+fit.rf <- train(Choice~Price1+Price2+Price3+segment+income+night+ppark+age+region+miles+educ+Urb+year+gender+NV1+NV2+SC2+FP3+BU3+AF2, data=train_rf2, method="rf", trControl=control)
+Sys.time()
+pred.rf <- predict(fit.rf, newdata = test_rf2, type = 'prob')
+mlogLoss(test_rf2[,'Choice'],pred.rf)
+
+            
 ```
 
 ## Feature Selection
@@ -101,8 +128,8 @@ probit_mll2 <- mlogLoss(ActualChoice,probit_pred2)
 ```{r}
 ## 1.158
 set.seed(1)
-train_rf <- subset(safety[,Task <= 12])
-test_rf <- subset(safety[,Task > 12])
+train_rf <- subset(safety, Task <= 12)
+test_rf <- subset(safety,Task > 12)
 fit.rf <- train(Choice~.-Case-No-Task-Ch1-Ch2-Ch3-Ch4, data=train_rf, method="rf", trControl=control)
 pred.rf <- predict(fit.rf, newdata = test_rf, type = 'prob')
 mlogLoss(test_rf[,'Choice'],pred.rf)
@@ -111,10 +138,14 @@ mlogLoss(test_rf[,'Choice'],pred.rf)
 
 ### Considering top 20 variables via RFS
 ```{r}
-## 1.118
+## 1.118 with income
+## 1.128 without income
+
 set.seed(1)
 control <- trainControl(method ='cv',savePredictions = T, classProbs = T)
-fit.rf <- train(Choice~Price1+Price2+Price3+income+segment+night+ppark+age+region+miles+educ+Urb+year+gender+NV1+NV2+SC2+FP3+BU3+AF2, data=train_rf, method="rf", trControl=control)
+Sys.time()
+fit.rf <- train(Choice~Price1+Price2+Price3+segment+night+ppark+age+region+miles+educ+Urb+year+gender+NV1+NV2+SC2+FP3+BU3+AF2, data=train_rf, method="rf", trControl=control)
+Sys.time()
 pred.rf <- predict(fit.rf, newdata = test_rf, type = 'prob')
 mlogLoss(test_rf[,'Choice'],pred.rf)
 
