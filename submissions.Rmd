@@ -1,0 +1,83 @@
+---
+title: "Untitled"
+author: "Ng Jia Wen"
+date: "7 August 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+setwd("~/School/Analytical Edge/Project")
+library(mlogit) 
+library(ModelMetrics)
+library(glmnet)
+library(caret)
+
+safety <- read.csv('train.csv')
+test <- read.csv('test2.csv')
+
+train <-  mlogit.data(safety,
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),id.var = 'Case')
+test$Ch1 <- 0
+test$Ch2 <- 0
+test$Ch3 <- 0
+test$Ch4 <- 0
+test$Choice <- 0
+
+testing <-  mlogit.data(test,
+                  shape ='wide',
+                  choice = 'Choice',
+                  sep = '',
+                  varying = c(4:83), 
+                  alt.levels = c("Ch1","Ch2","Ch3","Ch4"),id.var = 'Case')
+
+
+```
+
+### Submission 1
+```{r}
+##1.201 on kaggle
+probitmodel <-  mlogit(Choice ~CC+GN+NS+BU+FA+LD+BZ+FC+FP+RP+PP+KA+SC+TS+NV+MA+LB+AF+HU+Price,data = train,probit = TRUE)
+
+
+probit_pred <- predict(probitmodel,newdata = testing)
+write.csv(probit_pred,file="pred1.csv")
+
+
+```
+
+### Submission 2
+```{r}
+## 1.212 on kaggle
+probitmodel_2 <-  mlogit(Choice ~Price,data = train,probit = TRUE)
+
+probit_pred_2 <- predict(probitmodel_2,newdata = testing)
+write.csv(probit_pred_2,file="pred2.csv")
+
+```
+
+
+### Submission 3
+```{r}
+## 1.118 on local
+
+control <- trainControl(method ='cv',savePredictions = T, classProbs = T)
+fit.rf <- train(Choice~Price1+Price2+Price3+income+segment+night+ppark+age+region+miles+educ+Urb+year+gender+NV1+NV2+SC2+FP3+BU3+AF2, data=safety, method="rf", trControl=control)
+
+test$income <- factor(test$income, levels = levels(train$income))
+
+pred.rf <- predict(fit.rf, newdata = test, type = 'prob')
+write.csv(pred.rf,file="pred3.csv")
+
+
+
+
+
+
+
+
+
+```
